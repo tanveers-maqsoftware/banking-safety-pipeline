@@ -34,7 +34,7 @@ human rather than falling through to an answer.
 
 | Path | Purpose |
 | --- | --- |
-| `run.ps1` | Starts the API + Cloudflare tunnel and prints the public URL. |
+| `run.py` | Starts the API and optionally opens a Cloudflare tunnel with one cross-platform command. |
 | `main.py` | FastAPI service. Thin transport layer only. |
 | `safety/pipeline.py` | Stage orchestration. **Start here.** |
 | `safety/injection.py` | Prompt-injection and jailbreak rules. |
@@ -50,6 +50,20 @@ human rather than falling through to an answer.
 
 ## Setup
 
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python -m spacy download en_core_web_lg
+python tools/stamp_registry.py
+```
+
+### Windows (PowerShell)
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -62,7 +76,23 @@ python tools\stamp_registry.py
 The spaCy model is a separate download because it is not distributed on PyPI.
 Presidio will not start without it.
 
-`tools\stamp_registry.py` writes `prompts/registry.json`. The library verifies
+If `python -m spacy download en_core_web_lg` fails with SSL certificate errors,
+install the model wheel directly instead:
+
+```bash
+curl -kL -o /tmp/en_core_web_lg-3.8.0-py3-none-any.whl \
+  https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
+python -m pip install --no-deps /tmp/en_core_web_lg-3.8.0-py3-none-any.whl
+```
+
+If `pip install -r requirements.txt` hits a PyPI certificate issue, retry with
+trusted hosts:
+
+```bash
+python -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org -r requirements.txt
+```
+
+`tools/stamp_registry.py` writes `prompts/registry.json`. The library verifies
 every prompt's sha256 against that file at startup, so an edit to a prompt
 without a version bump is a loud startup failure rather than a silent change in
 agent behaviour. Re-run it after intentionally editing a prompt **and** bumping
@@ -70,10 +100,28 @@ its version.
 
 > **VS Code:** if the editor flags installed packages as missing, it is pointing
 > at the wrong interpreter. `Ctrl+Shift+P` -> *Python: Select Interpreter* ->
-> `.venv\Scripts\python.exe`.
+> `.venv/bin/python` on macOS/Linux or `.venv\Scripts\python.exe` on Windows.
 
 Install `cloudflared` too — it is what puts the service on a public URL for
 Copilot Studio:
+
+### macOS
+
+```bash
+brew install cloudflared
+```
+
+### Linux
+
+```bash
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y cloudflared
+
+# Fedora/RHEL
+sudo dnf install -y cloudflared
+```
+
+### Windows (PowerShell)
 
 ```powershell
 winget install --id Cloudflare.cloudflared
@@ -81,26 +129,45 @@ winget install --id Cloudflare.cloudflared
 
 ## Run
 
-One command starts the API, opens a Cloudflare tunnel and prints the public URL:
+From the repository root, launch the app with the project virtualenv so the
+correct dependencies are used:
+
+### macOS / Linux
+
+```bash
+./.venv/bin/python run.py --port 8000
+```
+
+### Windows (PowerShell)
 
 ```powershell
-.\run.ps1
+.\.venv\Scripts\python.exe run.py --port 8000
 ```
 
-```
-  Public URL : https://random-words-here.trycloudflare.com
-  Connector  : https://random-words-here.trycloudflare.com/v1/process
-```
+This starts the API, waits for `/v1/health` to return `ok`, and then opens a
+Cloudflare tunnel if `cloudflared` is available. It prints a public URL you can
+paste into Copilot Studio.
 
-Paste the connector URL into Copilot Studio. `Ctrl+C` stops both processes.
+The launcher checks whether port 8000 is already in use before it starts the
+API. If you see `Port 8000 is already in use`, stop the existing process or
+free that port and try again.
 
-To run without a tunnel while developing locally:
+To skip the tunnel and run the API locally only:
 
-```powershell
-python -m uvicorn main:app --reload --port 8000
+```bash
+./.venv/bin/python run.py --port 8000 --no-tunnel
 ```
 
 Interactive API docs: <http://127.0.0.1:8000/docs>
+
+### Troubleshooting
+
+- If the editor says packages are missing, select the workspace interpreter at
+  `.venv/bin/python` on macOS/Linux or `.venv\\Scripts\\python.exe` on Windows.
+- If the launcher reports `Port 8000 is already in use`, stop the process
+  already using that port and try again.
+- If the app does not start, run it once with `--no-tunnel` first so you can
+  verify the local API without the Cloudflare step.
 
 ### Endpoints
 
@@ -128,18 +195,34 @@ Copilot Studio cannot branch on an HTTP 500.
 
 ### Quick check
 
-```powershell
-curl.exe http://127.0.0.1:8000/v1/health
+Use the same port 8000 on macOS, Linux, and Windows.
 
-curl.exe -X POST http://127.0.0.1:8000/v1/process `
-  -H "Content-Type: application/json" `
-  -d '{\"message\":\"where is my nearest branch?\",\"session_id\":\"s1\"}'
+#### macOS / Linux
+
+```bash
+curl http://127.0.0.1:8000/v1/health
+
+curl -X POST http://127.0.0.1:8000/v1/process \
+  -H "Content-Type: application/json" \
+  -d '{"message":"where is my nearest branch?","session_id":"s1"}'
+```
+
+#### Windows (PowerShell)
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/v1/health"
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/v1/process" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"message":"where is my nearest branch?","session_id":"s1"}'
 ```
 
 ## Expose it for Copilot Studio
 
 Copilot Studio needs a public HTTPS URL that an **unauthenticated** caller can
-reach. `run.ps1` handles this end to end; this section explains what it is
+reach. `run.py` handles this end to end; this section explains what it is
 doing and how to fix it when it misbehaves.
 
 ### Why Cloudflare
@@ -153,7 +236,7 @@ instead of JSON and fails with a parse error that never names the real cause.
 A Cloudflare quick tunnel serves the app directly — no login, no interstitial,
 no extra headers on the connector.
 
-### What run.ps1 does
+### What run.py does
 
 1. Starts uvicorn bound to `127.0.0.1` only, so nothing on your network can
    reach the API. The tunnel is the sole route in.
@@ -165,7 +248,7 @@ no extra headers on the connector.
 
 To do it by hand instead, run the API in one terminal and this in another:
 
-```powershell
+```bash
 cloudflared tunnel --url http://localhost:8000
 ```
 
@@ -186,6 +269,15 @@ Studio will fail on it.
 A quick tunnel gets a new random hostname each time, so the Copilot Studio
 connector has to be re-pointed whenever you restart. That is fine for
 development and a nuisance for a demo.
+
+When the launcher succeeds, it prints the current public URL in the terminal in
+this form:
+
+```text
+Public URL : https://<random-hostname>.trycloudflare.com
+Connector  : https://<random-hostname>.trycloudflare.com/v1/process
+Health     : https://<random-hostname>.trycloudflare.com/v1/health
+```
 
 For a stable hostname you need a **named tunnel**, which requires a domain on
 your Cloudflare account:
