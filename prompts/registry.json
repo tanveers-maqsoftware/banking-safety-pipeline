@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "description": "Versioned prompt library for the Copilot Studio retail banking support agent. 'active' pins the version served at runtime; sha256 values are verified on load by safety/library.py.",
+  "active": {
+    "balance_inquiry": "2.0.0",
+    "branch_locator": "1.0.0",
+    "escalation": "1.0.0",
+    "loan_application": "1.0.0",
+    "transaction_dispute": "1.0.0"
+  },
+  "prompts": [
+    {
+      "id": "balance_inquiry",
+      "version": "1.0.0",
+      "status": "superseded",
+      "file": "balance_inquiry.v1.json",
+      "sha256": "4c535d747cf04e100219161b2fe516b673e69b039ee75297c307bcdb1fc4cbc9"
+    },
+    {
+      "id": "balance_inquiry",
+      "version": "2.0.0",
+      "status": "active",
+      "file": "balance_inquiry.v2.json",
+      "sha256": "aff50e56bbcf765e6aabf96ba38fc304a7a2abaaa3e8f97080df5a9e7f3f8bc5"
+    },
+    {
+      "id": "branch_locator",
+      "version": "1.0.0",
+      "status": "active",
+      "file": "branch_locator.v1.json",
+      "sha256": "118af8345ac530f97c79e6d7c76ef0c44841883f05b1e61107689f6776a55c9d"
+    },
+    {
+      "id": "escalation",
+      "version": "1.0.0",
+      "status": "active",
+      "file": "escalation.v1.json",
+      "sha256": "862d6559dead4189db4571ebbd68a6afcbe4cad133ca10566eab7ef987bbb33f"
+    },
+    {
+      "id": "loan_application",
+      "version": "1.0.0",
+      "status": "active",
+      "file": "loan_application.v1.json",
+      "sha256": "349ac13264551134d9fa9b099d258e2ed7c6da6c4369d64b3bc8a39f5e16c9e7"
+    },
+    {
+      "id": "transaction_dispute",
+      "version": "1.0.0",
+      "status": "active",
+      "file": "transaction_dispute.v1.json",
+      "sha256": "57beec7ef4909348cecbc65ab5019a7943d4aff6a748b5857fbedb0ca5989629"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "balance_inquiry",
+  "version": "1.0.0",
+  "status": "superseded",
+  "scenario": "Balance & recent transaction inquiry",
+  "owner": "AI COE Day 3",
+  "updated": "2026-07-20",
+  "system": "You are a UK retail banking support assistant. Answer questions about account balances and recent transactions using only the account context supplied to you. Be concise and factual. If the requested information is not in the supplied context, say so and offer to connect the customer to a colleague.",
+  "user_template": "Customer intent: {intent}\nCustomer query: {masked_query}\nDetected language: {language}",
+  "required_slots": ["intent", "masked_query", "language"],
+  "few_shot": [
+    {
+      "user": "Customer intent: balance_inquiry\nCustomer query: whats my current balance\nDetected language: en",
+      "assistant": "Your current account balance is shown against your account on file. Would you like your last five transactions as well?"
+    }
+  ],
+  "guardrails": {
+    "never_output": [],
+    "refuse_if": [
+      "request to transfer funds",
+      "request to change registered address"
+    ]
+  },
+  "route_confidence_threshold": 0.6,
+  "fallback_action": "escalate_to_human",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-07-20",
+      "note": "Initial balance prompt. No masking guardrails; assumes upstream layer sanitises input."
+    }
+  ]
+}
