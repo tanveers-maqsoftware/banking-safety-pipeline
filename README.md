@@ -34,6 +34,7 @@ human rather than falling through to an answer.
 
 | Path | Purpose |
 | --- | --- |
+| `run.ps1` | Starts the API + Cloudflare tunnel and prints the public URL. |
 | `main.py` | FastAPI service. Thin transport layer only. |
 | `safety/pipeline.py` | Stage orchestration. **Start here.** |
 | `safety/injection.py` | Prompt-injection and jailbreak rules. |
@@ -71,7 +72,29 @@ its version.
 > at the wrong interpreter. `Ctrl+Shift+P` -> *Python: Select Interpreter* ->
 > `.venv\Scripts\python.exe`.
 
+Install `cloudflared` too — it is what puts the service on a public URL for
+Copilot Studio:
+
+```powershell
+winget install --id Cloudflare.cloudflared
+```
+
 ## Run
+
+One command starts the API, opens a Cloudflare tunnel and prints the public URL:
+
+```powershell
+.\run.ps1
+```
+
+```
+  Public URL : https://random-words-here.trycloudflare.com
+  Connector  : https://random-words-here.trycloudflare.com/v1/process
+```
+
+Paste the connector URL into Copilot Studio. `Ctrl+C` stops both processes.
+
+To run without a tunnel while developing locally:
 
 ```powershell
 python -m uvicorn main:app --reload --port 8000
@@ -116,108 +139,70 @@ curl.exe -X POST http://127.0.0.1:8000/v1/process `
 ## Expose it for Copilot Studio
 
 Copilot Studio needs a public HTTPS URL that an **unauthenticated** caller can
-reach. Every option below fails the same way if you get that second part wrong:
-the connector receives a sign-in or interstitial HTML page instead of your JSON.
+reach. `run.ps1` handles this end to end; this section explains what it is
+doing and how to fix it when it misbehaves.
 
-### Option A — GitHub Codespaces (no local server)
+### Why Cloudflare
 
-The app runs on GitHub's VM, so nothing needs to stay running on your laptop.
-`.devcontainer/devcontainer.json` installs the dependencies, downloads the
-spaCy model and stamps the prompt registry on create.
+The alternatives all put something in front of the API that a connector cannot
+get past. GitHub Codespaces and VS Code Dev Tunnels forward ports as **private**
+by default, which means a GitHub sign-in page; localtunnel serves a
+"click to continue" interstitial. In every case Copilot Studio receives HTML
+instead of JSON and fails with a parse error that never names the real cause.
 
-1. On the repo page: **Code -> Codespaces -> Create codespace on main**.
-   Wait for `postCreateCommand` to finish — the spaCy model is ~560MB.
-2. In the Codespace terminal:
+A Cloudflare quick tunnel serves the app directly — no login, no interstitial,
+no extra headers on the connector.
 
-   ```bash
-   python -m uvicorn main:app --port 8000
-   ```
+### What run.ps1 does
 
-3. Open the **PORTS** panel. Port 8000 should be forwarded. **Confirm the
-   Visibility column says `Public`** — right-click -> *Port Visibility* ->
-   *Public* if not.
-4. Copy the forwarded address, of the form
-   `https://<codespace-name>-8000.app.github.dev`.
+1. Starts uvicorn bound to `127.0.0.1` only, so nothing on your network can
+   reach the API. The tunnel is the sole route in.
+2. Polls `/v1/health` until it passes. The service warms the spaCy and lingua
+   models on startup, so first boot takes a few seconds.
+3. Runs `cloudflared tunnel --url http://127.0.0.1:8000` and reads the assigned
+   hostname out of its output.
+4. Prints the URL and stops both processes on `Ctrl+C`.
 
-> **This is the step that breaks the connector.** A forwarded port defaults to
-> **Private**, which puts GitHub authentication in front of it. Copilot Studio
-> has no GitHub session, so it gets an HTML login page and the action fails with
-> a parse error rather than anything that names the real cause.
-
-Codespaces stop after ~30 minutes idle and the URL dies with them. The URL is
-stable across stop/start of the *same* Codespace, but a new one gets a new
-name. Codespaces bills against a monthly free quota — check your usage under
-**Settings -> Billing** before leaving one running.
-
-### Option B — Cloudflare Tunnel (local, most reliable)
-
-Best of the local options: no interstitial and no auth in front of it, so the
-connector works with no extra headers.
+To do it by hand instead, run the API in one terminal and this in another:
 
 ```powershell
-winget install --id Cloudflare.cloudflared
 cloudflared tunnel --url http://localhost:8000
 ```
 
-Prints `https://<random-words>.trycloudflare.com`. No account needed.
-
-### Option C — VS Code Dev Tunnels
-
-The other feature often called "the GitHub tunnel" — it is Microsoft Dev
-Tunnels, which you sign into with your GitHub account. Your app still runs
-locally.
-
-In VS Code: **PORTS** panel -> *Forward a Port* -> `8000` -> right-click ->
-*Port Visibility* -> **Public**. Same private-by-default trap as Codespaces.
-
-Or from the CLI:
-
-```powershell
-winget install --id Microsoft.devtunnel
-devtunnel user login
-devtunnel host -p 8000 --allow-anonymous
-```
-
-`--allow-anonymous` is not optional for Copilot Studio — without it the tunnel
-demands a login.
-
-### Option D — localtunnel
-
-```powershell
-npx localtunnel --port 8000
-```
-
-Prints `https://<subdomain>.loca.lt`.
-
-> **Gotcha:** localtunnel serves a "click to continue" interstitial to
-> first-time visitors, which the connector receives instead of your JSON. Send
-> `bypass-tunnel-reminder: true` on every request to skip it. Add it to the
-> connector's headers, or test with:
->
-> ```powershell
-> curl.exe -H "bypass-tunnel-reminder: true" https://<subdomain>.loca.lt/v1/health
-> ```
-
 ### Verify before wiring up the connector
 
-Whichever option you pick, check the URL returns **JSON and not HTML** from
-somewhere without your session — a phone on mobile data, or:
+Check the URL returns **JSON and not HTML**:
 
 ```powershell
 curl.exe -sS https://<your-tunnel-url>/v1/health
 ```
 
 Expect `{"status":"ok","active_prompts":{...}}`. Anything starting with
-`<!DOCTYPE html>` means the port is still private or an interstitial is in the
-way, and Copilot Studio will fail on it.
+`<!DOCTYPE html>` means something is sitting in front of the API and Copilot
+Studio will fail on it.
 
-Tunnel URLs change on restart. Re-point the connector each time.
+### The URL changes on every restart
+
+A quick tunnel gets a new random hostname each time, so the Copilot Studio
+connector has to be re-pointed whenever you restart. That is fine for
+development and a nuisance for a demo.
+
+For a stable hostname you need a **named tunnel**, which requires a domain on
+your Cloudflare account:
+
+```powershell
+cloudflared tunnel login
+cloudflared tunnel create banking-safety
+cloudflared tunnel route dns banking-safety api.yourdomain.com
+cloudflared tunnel run --url http://127.0.0.1:8000 banking-safety
+```
+
+`api.yourdomain.com` then stays put across restarts.
 
 ## Wire into Copilot Studio
 
 1. **Settings -> Custom connectors -> New**, pointed at your tunnel host.
-2. Add the action `POST /v1/process` with `Content-Type: application/json` (plus
-   `bypass-tunnel-reminder: true` if you used localtunnel).
+2. Add the action `POST /v1/process` with `Content-Type: application/json`.
 3. In your topic, call the connector with the customer's message and the
    conversation id, then branch on the response:
 
