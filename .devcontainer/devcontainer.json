@@ -1,0 +1,31 @@
+{
+  "name": "Banking Safety Pipeline",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+
+  // Installs deps, downloads the spaCy model Presidio needs, and stamps the
+  // prompt registry. The registry is gitignored-by-nature generated output --
+  // without this step the app cannot boot, because library.py verifies every
+  // prompt's sha256 against it at startup.
+  "postCreateCommand": "pip install --user -r requirements.txt && python -m spacy download en_core_web_lg && python tools/stamp_registry.py",
+
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "safety-pipeline",
+      "onAutoForward": "notify",
+      // Copilot Studio is an unauthenticated caller. A private port returns a
+      // GitHub sign-in page instead of JSON, so the connector must have this
+      // public. Verify it in the PORTS panel -- org policy can override this.
+      "visibility": "public"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  }
+}

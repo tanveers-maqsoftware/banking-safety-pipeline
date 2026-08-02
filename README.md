@@ -115,23 +115,73 @@ curl.exe -X POST http://127.0.0.1:8000/v1/process `
 
 ## Expose it for Copilot Studio
 
-Copilot Studio needs a public HTTPS URL. Keep the app running from the step
-above, then open a **second terminal** and start a tunnel.
+Copilot Studio needs a public HTTPS URL that an **unauthenticated** caller can
+reach. Every option below fails the same way if you get that second part wrong:
+the connector receives a sign-in or interstitial HTML page instead of your JSON.
 
-### Option A — Cloudflare Tunnel (recommended)
+### Option A — GitHub Codespaces (no local server)
 
-Recommended because it serves your app directly with no interstitial page, so
-Copilot Studio's connector works without extra headers.
+The app runs on GitHub's VM, so nothing needs to stay running on your laptop.
+`.devcontainer/devcontainer.json` installs the dependencies, downloads the
+spaCy model and stamps the prompt registry on create.
+
+1. On the repo page: **Code -> Codespaces -> Create codespace on main**.
+   Wait for `postCreateCommand` to finish — the spaCy model is ~560MB.
+2. In the Codespace terminal:
+
+   ```bash
+   python -m uvicorn main:app --port 8000
+   ```
+
+3. Open the **PORTS** panel. Port 8000 should be forwarded. **Confirm the
+   Visibility column says `Public`** — right-click -> *Port Visibility* ->
+   *Public* if not.
+4. Copy the forwarded address, of the form
+   `https://<codespace-name>-8000.app.github.dev`.
+
+> **This is the step that breaks the connector.** A forwarded port defaults to
+> **Private**, which puts GitHub authentication in front of it. Copilot Studio
+> has no GitHub session, so it gets an HTML login page and the action fails with
+> a parse error rather than anything that names the real cause.
+
+Codespaces stop after ~30 minutes idle and the URL dies with them. The URL is
+stable across stop/start of the *same* Codespace, but a new one gets a new
+name. Codespaces bills against a monthly free quota — check your usage under
+**Settings -> Billing** before leaving one running.
+
+### Option B — Cloudflare Tunnel (local, most reliable)
+
+Best of the local options: no interstitial and no auth in front of it, so the
+connector works with no extra headers.
 
 ```powershell
 winget install --id Cloudflare.cloudflared
 cloudflared tunnel --url http://localhost:8000
 ```
 
-It prints a URL like `https://<random-words>.trycloudflare.com`. No account
-needed for a quick tunnel.
+Prints `https://<random-words>.trycloudflare.com`. No account needed.
 
-### Option B — localtunnel
+### Option C — VS Code Dev Tunnels
+
+The other feature often called "the GitHub tunnel" — it is Microsoft Dev
+Tunnels, which you sign into with your GitHub account. Your app still runs
+locally.
+
+In VS Code: **PORTS** panel -> *Forward a Port* -> `8000` -> right-click ->
+*Port Visibility* -> **Public**. Same private-by-default trap as Codespaces.
+
+Or from the CLI:
+
+```powershell
+winget install --id Microsoft.devtunnel
+devtunnel user login
+devtunnel host -p 8000 --allow-anonymous
+```
+
+`--allow-anonymous` is not optional for Copilot Studio — without it the tunnel
+demands a login.
+
+### Option D — localtunnel
 
 ```powershell
 npx localtunnel --port 8000
@@ -140,16 +190,28 @@ npx localtunnel --port 8000
 Prints `https://<subdomain>.loca.lt`.
 
 > **Gotcha:** localtunnel serves a "click to continue" interstitial to
-> first-time visitors, which a Copilot Studio connector will receive instead of
-> your JSON. Send the header `bypass-tunnel-reminder: true` on every request to
-> skip it. Add it to the connector's headers, or test with:
+> first-time visitors, which the connector receives instead of your JSON. Send
+> `bypass-tunnel-reminder: true` on every request to skip it. Add it to the
+> connector's headers, or test with:
 >
 > ```powershell
 > curl.exe -H "bypass-tunnel-reminder: true" https://<subdomain>.loca.lt/v1/health
 > ```
 
-Both tunnel URLs change every restart and only live as long as the terminal
-stays open. Re-point the connector whenever you restart the tunnel.
+### Verify before wiring up the connector
+
+Whichever option you pick, check the URL returns **JSON and not HTML** from
+somewhere without your session — a phone on mobile data, or:
+
+```powershell
+curl.exe -sS https://<your-tunnel-url>/v1/health
+```
+
+Expect `{"status":"ok","active_prompts":{...}}`. Anything starting with
+`<!DOCTYPE html>` means the port is still private or an interstitial is in the
+way, and Copilot Studio will fail on it.
+
+Tunnel URLs change on restart. Re-point the connector each time.
 
 ## Wire into Copilot Studio
 
