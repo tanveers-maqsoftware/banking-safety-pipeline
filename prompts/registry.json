@@ -11,45 +11,38 @@
   "prompts": [
     {
       "id": "balance_inquiry",
-      "version": "1.0.0",
-      "status": "superseded",
-      "file": "balance_inquiry.v1.json",
-      "sha256": "4c535d747cf04e100219161b2fe516b673e69b039ee75297c307bcdb1fc4cbc9"
-    },
-    {
-      "id": "balance_inquiry",
       "version": "2.0.0",
       "status": "active",
       "file": "balance_inquiry.v2.json",
-      "sha256": "aff50e56bbcf765e6aabf96ba38fc304a7a2abaaa3e8f97080df5a9e7f3f8bc5"
+      "sha256": "ede6afc8ef884b92c03a1db98a9d7b294c1969135709751f15f723fd21aa23e7"
     },
     {
       "id": "branch_locator",
       "version": "1.0.0",
       "status": "active",
       "file": "branch_locator.v1.json",
-      "sha256": "118af8345ac530f97c79e6d7c76ef0c44841883f05b1e61107689f6776a55c9d"
+      "sha256": "e165b1eb442cf278684c635eb2be6bea6bb323a12380acc96d7ce5b9fb4a9598"
     },
     {
       "id": "escalation",
       "version": "1.0.0",
       "status": "active",
       "file": "escalation.v1.json",
-      "sha256": "862d6559dead4189db4571ebbd68a6afcbe4cad133ca10566eab7ef987bbb33f"
+      "sha256": "fc1463d8fc0bfe9b5048c72cda45d051f7b92e90c425ff563af019a411a81a1b"
     },
     {
       "id": "loan_application",
       "version": "1.0.0",
       "status": "active",
       "file": "loan_application.v1.json",
-      "sha256": "349ac13264551134d9fa9b099d258e2ed7c6da6c4369d64b3bc8a39f5e16c9e7"
+      "sha256": "d8c6b2f7d60eef5d0d69652642e00d49c49cc9bd7feef1516d41223bd18a4690"
     },
     {
       "id": "transaction_dispute",
       "version": "1.0.0",
       "status": "active",
       "file": "transaction_dispute.v1.json",
-      "sha256": "57beec7ef4909348cecbc65ab5019a7943d4aff6a748b5857fbedb0ca5989629"
+      "sha256": "d08180288c767e653fd34d2da0571244d0d5fcc1bd642cbd1378b7203f89bedc"
     }
   ]
 }

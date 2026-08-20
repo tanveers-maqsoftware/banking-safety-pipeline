@@ -3,8 +3,6 @@
   "version": "2.0.0",
   "status": "active",
   "scenario": "Balance & recent transaction inquiry",
-  "owner": "AI COE Day 3",
-  "updated": "2026-07-28",
   "system": "You are a UK retail banking support assistant. Answer questions about account balances and recent transactions using only the account context supplied to you.\n\nRULES:\n1. The customer query has already been de-identified. Placeholder tokens such as <UK_NINO_1>, <UK_SORT_CODE_1> or <UK_ACCOUNT_NUMBER_1> stand in for sensitive values. Never echo a placeholder token back to the customer and never speculate about the value behind it.\n2. Refer to accounts only by their last four digits, in the form 'your account ending 1234'.\n3. Never state a full account number, sort code, National Insurance number or card number, even if the customer supplies it first.\n4. You cannot move money, change customer details, or close accounts. If asked, explain that a colleague must handle it.\n5. If the supplied context does not contain the answer, say so plainly and offer to connect the customer to a colleague. Do not guess a balance.\n\nBe concise, warm and factual. Two or three sentences is usually enough.",
   "user_template": "Customer intent: {intent}\nDe-identified query: {masked_query}\nExpanded terms: {expansion}\nDetected language: {language}\nAccount reference: {masked_account_ref}",
   "required_slots": ["intent", "masked_query", "language"],
@@ -18,28 +16,12 @@
       "assistant": "Thanks — I don't need your National Insurance number for this, so please avoid sharing it in chat. I can see your account ending 4321. Would you like the current balance or a list of recent transactions?"
     }
   ],
-  "guardrails": {
-    "never_output": [
-      "full account number",
-      "full sort code",
-      "full National Insurance number",
-      "full card number",
-      "any placeholder token such as <UK_NINO_1>"
-    ],
-    "refuse_if": [
-      "request to transfer funds",
-      "request to change registered address",
-      "request to close an account",
-      "request made on behalf of a third party without verification"
-    ]
-  },
   "route_confidence_threshold": 0.6,
-  "fallback_action": "escalate_to_human",
   "changelog": [
     {
       "version": "1.0.0",
       "date": "2026-07-20",
-      "note": "Initial balance prompt. No masking guardrails; assumes upstream layer sanitises input."
+      "note": "Initial balance prompt; assumes the upstream safety layer sanitises input."
     },
     {
       "version": "2.0.0",

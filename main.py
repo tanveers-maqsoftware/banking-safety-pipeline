@@ -71,6 +71,16 @@ class ProcessRequest(BaseModel):
     )
 
 
+class EntityResponse(BaseModel):
+    """One PII entity detected and replaced by the masking stage."""
+
+    entity_type: str
+    start: int
+    end: int
+    score: float
+    placeholder: str
+
+
 class ProcessResponse(BaseModel):
     """Flat result. Field groups match how a Copilot Studio topic consumes them."""
 
@@ -96,7 +106,7 @@ class ProcessResponse(BaseModel):
     # --- observability, for logging and the review queue --------------------
     language: str
     masked_text: str = Field(description="Customer text with PII replaced.")
-    entities_found: list[str]
+    entities_found: list[EntityResponse]
     entity_count: int
     account_ref: str = Field(description="Safe reference, e.g. 'ending 4321'.")
     injection_score: float
@@ -128,7 +138,16 @@ def process(request: ProcessRequest) -> ProcessResponse:
         user_prompt=result.user_prompt,
         language=result.language,
         masked_text=result.masked_text,
-        entities_found=result.entities_found,
+        entities_found=[
+            EntityResponse(
+                entity_type=entity.entity_type,
+                start=entity.start,
+                end=entity.end,
+                score=entity.score,
+                placeholder=entity.placeholder,
+            )
+            for entity in result.entities_found
+        ],
         entity_count=result.entity_count,
         account_ref=result.account_ref,
         injection_score=result.injection_score,

@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "status": "active",
   "scenario": "Disputed transaction, suspected fraud and chargeback intake",
-  "owner": "AI COE Day 3",
-  "updated": "2026-07-28",
   "system": "You are a UK retail banking support assistant handling disputed transactions and suspected fraud.\n\nRULES:\n1. The customer query has been de-identified. Never echo a placeholder token such as <CREDIT_CARD_1> back to the customer.\n2. Your job is intake, not adjudication. Gather the transaction date, approximate amount, merchant name, and whether the customer recognises the merchant. Never tell the customer whether their claim will succeed.\n3. Never ask for a full card number, PIN, password, one-time passcode or full account number. If the customer offers one, tell them not to share it and continue without it.\n4. If the customer reports a card they still hold has been used fraudulently, or reports a lost or stolen card, treat it as urgent and hand over to a colleague immediately rather than completing intake.\n5. Never quote refund timescales as a guarantee. Say 'usually' and note it depends on the outcome of the investigation.\n6. Do not blame the customer or imply the transaction was their error.\n\nBe calm and reassuring. A customer raising a dispute is often anxious.",
   "user_template": "Customer intent: {intent}\nDe-identified query: {masked_query}\nExpanded terms: {expansion}\nDetected language: {language}\nCard/account reference: {masked_account_ref}",
   "required_slots": ["intent", "masked_query", "language"],
@@ -18,21 +16,7 @@
       "assistant": "Please don't share your card number in chat — I don't need it, and it's safer kept private. Because your card is still with you and it's being used, I'm treating this as urgent and putting you straight through to our fraud team now."
     }
   ],
-  "guardrails": {
-    "never_output": [
-      "a prediction of whether a dispute will succeed",
-      "a guaranteed refund timescale",
-      "a request for PIN, password, OTP or full card number",
-      "any placeholder token"
-    ],
-    "refuse_if": [
-      "request to reverse a transaction directly in chat",
-      "request to confirm a refund outcome",
-      "request for another customer's transaction detail"
-    ]
-  },
   "route_confidence_threshold": 0.6,
-  "fallback_action": "escalate_to_human",
   "changelog": [
     {
       "version": "1.0.0",

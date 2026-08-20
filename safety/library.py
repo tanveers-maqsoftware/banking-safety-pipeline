@@ -48,9 +48,7 @@ class Prompt:
     user_template: str
     required_slots: list[str]
     few_shot: list[dict] = field(default_factory=list)
-    guardrails: dict = field(default_factory=dict)
     route_confidence_threshold: float = 0.6
-    fallback_action: str = "escalate_to_human"
     changelog: list[dict] = field(default_factory=list)
     source_file: str = ""
     sha256: str = ""
@@ -114,9 +112,7 @@ class PromptLibrary:
                 user_template=data["user_template"],
                 required_slots=data["required_slots"],
                 few_shot=data.get("few_shot", []),
-                guardrails=data.get("guardrails", {}),
                 route_confidence_threshold=data.get("route_confidence_threshold", 0.6),
-                fallback_action=data.get("fallback_action", "escalate_to_human"),
                 changelog=data.get("changelog", []),
                 source_file=entry["file"],
                 sha256=actual,
@@ -188,12 +184,6 @@ class PromptLibrary:
     def scenarios(self) -> list[str]:
         return sorted(self._active)
 
-    def versions_of(self, scenario: str) -> list[str]:
-        return sorted(v for (s, v) in self._prompts if s == scenario)
-
     def active_map(self) -> dict[str, str]:
         """Scenario -> active version. Surfaced by the service /v1/health."""
         return dict(self._active)
-
-    def all_prompts(self) -> list[Prompt]:
-        return list(self._prompts.values())

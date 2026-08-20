@@ -71,7 +71,7 @@ class PipelineResult:
     injection_families: list[str] = field(default_factory=list)
 
     masked_text: str = ""
-    entities_found: list[str] = field(default_factory=list)
+    entities_found: list[pii.Entity] = field(default_factory=list)
     entity_count: int = 0
     account_ref: str = "not supplied"
 
@@ -165,7 +165,7 @@ class SafetyPipeline:
         # --- 3. PII masking --------------------------------------------------
         masked = pii.mask(text, session_id=session_id, language=lang.code)
         result.masked_text = masked.masked_text
-        result.entities_found = masked.entity_types
+        result.entities_found = masked.entities
         result.entity_count = len(masked.entities)
         result.account_ref = masked.account_ref
         stages.append("pii")
