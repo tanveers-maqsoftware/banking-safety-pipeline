@@ -32,6 +32,11 @@ human rather than falling through to an answer.
 
 ## Layout
 
+The production path is `run.py` -> `main.py` -> `safety/pipeline.py`. The
+pipeline calls the language, injection, PII, rewrite, intent, assembler and
+prompt-library modules. The remaining files support configuration, testing or
+operations; they are not imported for every request.
+
 | Path | Purpose |
 | --- | --- |
 | `run.py` | Starts the API and optionally opens a Cloudflare tunnel with one cross-platform command. |
