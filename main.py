@@ -118,6 +118,7 @@ class ProcessResponse(BaseModel):
 @app.post("/v1/process", response_model=ProcessResponse)
 def process(request: ProcessRequest) -> ProcessResponse:
     """Run one customer message through every safety stage."""
+    print(f"/v1/process input: {request.model_dump()}", flush=True)
     result = pipeline.process(
         request.message,
         session_id=request.session_id,

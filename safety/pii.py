@@ -52,9 +52,11 @@ BANKING_ENTITIES = [
 MIN_SCORE = 0.4
 
 _UK_SORT_CODE = r"\b\d{2}[-\s]\d{2}[-\s]\d{2}\b"
-# UK domestic account numbers are 8 digits. Bounded by non-digits so we do not
-# clip the middle out of a 16-digit card number.
-_UK_ACCOUNT_NUMBER = r"(?<!\d)\d{8}(?!\d)"
+# Account numbers vary by country. Context words below keep this from treating
+# every long numeric value as an account number.
+_ACCOUNT_NUMBER = r"(?<!\d)\d{8,18}(?!\d)"
+# Context-aware coverage for common international 10-digit contact numbers.
+_CONTACT_NUMBER = r"(?<!\d)\d{10}(?!\d)"
 
 
 @dataclass
@@ -145,11 +147,16 @@ def _analyzer():
         PatternRecognizer(
             supported_entity="UK_ACCOUNT_NUMBER",
             name="UkAccountNumberRecognizer",
-            # Low base score on purpose: eight bare digits are ambiguous. The
-            # context words below raise it when the surrounding text makes it
-            # clear this really is an account number.
-            patterns=[Pattern("uk_account_number", _UK_ACCOUNT_NUMBER, 0.35)],
+            patterns=[Pattern("account_number", _ACCOUNT_NUMBER, 0.85)],
             context=["account", "acc", "a/c", "acct", "number", "sort", "current", "savings"],
+        )
+    )
+    engine.registry.add_recognizer(
+        PatternRecognizer(
+            supported_entity="PHONE_NUMBER",
+            name="ContactNumberRecognizer",
+            patterns=[Pattern("contact_number", _CONTACT_NUMBER, 0.9)],
+            context=["contact", "phone", "mobile", "telephone", "call"],
         )
     )
     return engine
