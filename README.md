@@ -163,7 +163,27 @@ To skip the tunnel and run the API locally only:
 ./.venv/bin/python run.py --port 8000 --no-tunnel
 ```
 
+### Windows (PowerShell)
+
+```powershell
+.\.venv\Scripts\python.exe run.py --port 8000 --no-tunnel
+```
+
 Interactive API docs: <http://127.0.0.1:8000/docs>
+
+## Test
+
+From the repository root, run the test suite with the project virtualenv:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Run only the injection tests while tuning scanner rules:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\test_injection.py -q
+```
 
 ### Troubleshooting
 
